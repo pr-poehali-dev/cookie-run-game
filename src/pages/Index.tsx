@@ -440,9 +440,13 @@ const Index = () => {
 
                   {!gameState.isPlaying && gameOver && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
-                      <div className="bg-white p-8 rounded-2xl border-4 border-primary text-center">
-                        <div className="text-4xl mb-4">🎮</div>
-                        <h3 className="text-3xl font-bold text-primary mb-2">Игра окончена!</h3>
+                      <div className="bg-white p-8 rounded-2xl border-4 border-primary text-center max-w-md">
+                        <img 
+                          src="https://cdn.poehali.dev/files/a5111a36-c8a1-470f-959b-d027d57604c4.png"
+                          alt="Pure Vanilla Cookie"
+                          className="w-32 h-32 mx-auto mb-4 object-contain drop-shadow-xl"
+                        />
+                        <h3 className="text-3xl font-bold text-primary mb-2">ШадоуВанилы победили!</h3>
                         <p className="text-xl mb-4">Набрано очков: <span className="font-bold text-secondary">{score}</span></p>
                       </div>
                     </div>
