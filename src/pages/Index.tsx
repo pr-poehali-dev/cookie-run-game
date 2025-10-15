@@ -392,7 +392,15 @@ const Index = () => {
                     className="absolute left-16 transition-all duration-75 ease-linear"
                     style={{ bottom: `${playerHeight}%` }}
                   >
-                    <div className="text-5xl">{isFlying ? '🚀' : '🏃'}</div>
+                    <img 
+                      src="https://cdn.poehali.dev/files/8a72effe-a051-448a-b949-e67378f89373.png" 
+                      alt="Shadow Milk Cookie"
+                      className="w-16 h-16 object-contain drop-shadow-lg"
+                      style={{ 
+                        transform: isFlying ? 'scale(1.1) rotate(-5deg)' : 'scale(1)',
+                        transition: 'transform 0.2s ease-out'
+                      }}
+                    />
                   </div>
 
                   {gameState.isPlaying && (
@@ -413,7 +421,11 @@ const Index = () => {
                         className="absolute transition-all duration-75"
                         style={{ left: `${cookiePosition}%`, top: '35%' }}
                       >
-                        <div className="text-4xl">🍪</div>
+                        <img 
+                          src="https://cdn.poehali.dev/files/6bf6d106-ce2d-4b81-87e4-a75c9a7507b5.png"
+                          alt="Soul Stone"
+                          className="w-12 h-12 object-contain drop-shadow-lg animate-bounce-cookie"
+                        />
                       </div>
                     </>
                   )}
