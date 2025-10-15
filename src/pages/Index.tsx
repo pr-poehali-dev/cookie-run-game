@@ -49,14 +49,18 @@ const Index = () => {
   });
   
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
-  const obstaclePositionRef = useRef(100);
+  const [obstaclePosition, setObstaclePosition] = useState(100);
+  const [cookiePosition, setCookiePosition] = useState(150);
   const [playerJumping, setPlayerJumping] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [score, setScore] = useState(0);
 
   const startGame = () => {
     setGameState(prev => ({ ...prev, isPlaying: true, distance: 0 }));
     setGameOver(false);
-    obstaclePositionRef.current = 100;
+    setObstaclePosition(100);
+    setCookiePosition(150);
+    setScore(0);
   };
 
   const stopGame = () => {
@@ -67,37 +71,37 @@ const Index = () => {
   };
 
   const jump = () => {
-    if (!playerJumping && !gameOver) {
+    if (!playerJumping && !gameOver && gameState.isPlaying) {
       setPlayerJumping(true);
-      setTimeout(() => setPlayerJumping(false), 500);
+      setTimeout(() => setPlayerJumping(false), 600);
     }
   };
 
   useEffect(() => {
-    if (gameState.isPlaying) {
+    if (gameState.isPlaying && !gameOver) {
       gameLoopRef.current = setInterval(() => {
-        obstaclePositionRef.current -= 2;
-        
-        if (obstaclePositionRef.current < -10) {
-          obstaclePositionRef.current = 100;
-          setGameState(prev => ({
-            ...prev,
-            cookies: prev.cookies + Math.floor(1 + prev.magnetPower / 100),
-            experience: prev.experience + 10,
-            distance: prev.distance + 1,
-            coins: prev.coins + 5
-          }));
-        }
+        setObstaclePosition(prev => {
+          const newPos = prev - 1.5;
+          if (newPos < -10) {
+            setScore(s => s + 1);
+            return 100;
+          }
+          return newPos;
+        });
 
-        if (obstaclePositionRef.current < 20 && obstaclePositionRef.current > 0 && !playerJumping) {
-          setGameOver(true);
-          stopGame();
-          toast({
-            title: "Игра окончена! 🍪",
-            description: `Собрано печенек: ${gameState.cookies + 1}, Пройдено: ${gameState.distance}м`
-          });
-        }
-      }, 50);
+        setCookiePosition(prev => {
+          const newPos = prev - 1.2;
+          if (newPos < -10) {
+            return 150;
+          }
+          return newPos;
+        });
+
+        setGameState(prev => ({
+          ...prev,
+          distance: prev.distance + 0.1
+        }));
+      }, 30);
     }
 
     return () => {
@@ -105,7 +109,36 @@ const Index = () => {
         clearInterval(gameLoopRef.current);
       }
     };
-  }, [gameState.isPlaying, playerJumping, gameState.cookies, gameState.distance, gameState.magnetPower]);
+  }, [gameState.isPlaying, gameOver]);
+
+  useEffect(() => {
+    if (gameState.isPlaying && !gameOver) {
+      if (obstaclePosition < 25 && obstaclePosition > 5 && !playerJumping) {
+        setGameOver(true);
+        setGameState(prev => ({
+          ...prev,
+          isPlaying: false,
+          cookies: prev.cookies + score,
+          experience: prev.experience + score * 10,
+          coins: prev.coins + score * 5
+        }));
+        toast({
+          title: "Игра окончена! 🍪",
+          description: `Набрано очков: ${score}, Собрано печенек: ${score}`
+        });
+      }
+
+      if (cookiePosition < 25 && cookiePosition > 5) {
+        setCookiePosition(150);
+        setGameState(prev => ({
+          ...prev,
+          cookies: prev.cookies + 1,
+          experience: prev.experience + 5,
+          coins: prev.coins + 3
+        }));
+      }
+    }
+  }, [obstaclePosition, cookiePosition, playerJumping, gameState.isPlaying, gameOver, score]);
 
   const buyPowerUp = (powerUp: PowerUp) => {
     if (gameState.coins >= powerUp.cost) {
@@ -254,26 +287,44 @@ const Index = () => {
                   <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-amber-800 to-amber-600"></div>
                   
                   <div
-                    className={`absolute bottom-20 left-16 transition-all duration-300 ${
-                      playerJumping ? 'bottom-40' : 'bottom-20'
+                    className={`absolute left-16 transition-all duration-500 ease-out ${
+                      playerJumping ? 'bottom-48' : 'bottom-20'
                     }`}
                   >
-                    <div className="text-6xl animate-bounce-cookie">🍪</div>
+                    <div className="text-6xl">🏃</div>
                   </div>
 
                   {gameState.isPlaying && (
-                    <div
-                      className="absolute bottom-20"
-                      style={{ left: `${obstaclePositionRef.current}%` }}
-                    >
-                      <div className="text-5xl">🌳</div>
-                    </div>
+                    <>
+                      <div
+                        className="absolute bottom-20 transition-all"
+                        style={{ left: `${obstaclePosition}%` }}
+                      >
+                        <div className="text-4xl">🌳</div>
+                      </div>
+                      <div
+                        className="absolute bottom-28 transition-all"
+                        style={{ left: `${cookiePosition}%` }}
+                      >
+                        <div className="text-3xl">🍪</div>
+                      </div>
+                    </>
                   )}
 
                   {gameState.isPlaying && (
                     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 px-6 py-2 rounded-full border-4 border-primary">
                       <div className="text-2xl font-bold text-primary">
-                        Дистанция: {gameState.distance}м
+                        Очки: {score}
+                      </div>
+                    </div>
+                  )}
+
+                  {!gameState.isPlaying && gameOver && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                      <div className="bg-white p-8 rounded-2xl border-4 border-primary text-center">
+                        <div className="text-4xl mb-4">🎮</div>
+                        <h3 className="text-3xl font-bold text-primary mb-2">Игра окончена!</h3>
+                        <p className="text-xl mb-4">Набрано очков: <span className="font-bold text-secondary">{score}</span></p>
                       </div>
                     </div>
                   )}
