@@ -50,17 +50,25 @@ const Index = () => {
   
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
   const [obstaclePosition, setObstaclePosition] = useState(100);
+  const [birdPosition, setBirdPosition] = useState(180);
   const [cookiePosition, setCookiePosition] = useState(150);
-  const [playerJumping, setPlayerJumping] = useState(false);
+  const [playerHeight, setPlayerHeight] = useState(20);
+  const [isFlying, setIsFlying] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
+  const [health, setHealth] = useState(100);
+  const lastHitRef = useRef(0);
 
   const startGame = () => {
     setGameState(prev => ({ ...prev, isPlaying: true, distance: 0 }));
     setGameOver(false);
     setObstaclePosition(100);
+    setBirdPosition(180);
     setCookiePosition(150);
     setScore(0);
+    setHealth(100);
+    setPlayerHeight(20);
+    lastHitRef.current = 0;
   };
 
   const stopGame = () => {
@@ -70,29 +78,49 @@ const Index = () => {
     }
   };
 
-  const jump = () => {
-    if (!playerJumping && !gameOver && gameState.isPlaying) {
-      setPlayerJumping(true);
-      setTimeout(() => setPlayerJumping(false), 600);
+  const startFlying = () => {
+    if (gameState.isPlaying && !gameOver) {
+      setIsFlying(true);
     }
+  };
+
+  const stopFlying = () => {
+    setIsFlying(false);
   };
 
   useEffect(() => {
     if (gameState.isPlaying && !gameOver) {
       gameLoopRef.current = setInterval(() => {
+        setPlayerHeight(prev => {
+          if (isFlying && prev < 70) {
+            return prev + 2;
+          } else if (!isFlying && prev > 20) {
+            return prev - 1.5;
+          }
+          return prev;
+        });
+
         setObstaclePosition(prev => {
-          const newPos = prev - 1.5;
+          const newPos = prev - 1.2;
           if (newPos < -10) {
             setScore(s => s + 1);
-            return 100;
+            return 100 + Math.random() * 50;
+          }
+          return newPos;
+        });
+
+        setBirdPosition(prev => {
+          const newPos = prev - 1.3;
+          if (newPos < -10) {
+            return 100 + Math.random() * 80;
           }
           return newPos;
         });
 
         setCookiePosition(prev => {
-          const newPos = prev - 1.2;
+          const newPos = prev - 1.1;
           if (newPos < -10) {
-            return 150;
+            return 120 + Math.random() * 60;
           }
           return newPos;
         });
@@ -109,36 +137,86 @@ const Index = () => {
         clearInterval(gameLoopRef.current);
       }
     };
-  }, [gameState.isPlaying, gameOver]);
+  }, [gameState.isPlaying, gameOver, isFlying]);
 
   useEffect(() => {
     if (gameState.isPlaying && !gameOver) {
-      if (obstaclePosition < 25 && obstaclePosition > 5 && !playerJumping) {
-        setGameOver(true);
-        setGameState(prev => ({
-          ...prev,
-          isPlaying: false,
-          cookies: prev.cookies + score,
-          experience: prev.experience + score * 10,
-          coins: prev.coins + score * 5
-        }));
-        toast({
-          title: "Игра окончена! 🍪",
-          description: `Набрано очков: ${score}, Собрано печенек: ${score}`
-        });
+      const now = Date.now();
+      
+      if (obstaclePosition < 25 && obstaclePosition > 5 && playerHeight < 35) {
+        if (now - lastHitRef.current > 1000) {
+          lastHitRef.current = now;
+          setHealth(prev => {
+            const newHealth = prev - 20;
+            if (newHealth <= 0) {
+              setGameOver(true);
+              setGameState(prevState => ({
+                ...prevState,
+                isPlaying: false,
+                cookies: prevState.cookies + score,
+                experience: prevState.experience + score * 10,
+                coins: prevState.coins + score * 5
+              }));
+              toast({
+                title: "Игра окончена! 🍪",
+                description: `Набрано очков: ${score}`
+              });
+            } else {
+              toast({
+                title: "Ударился об ёлку! 🌳",
+                description: `HP: ${newHealth}`,
+                variant: "destructive"
+              });
+            }
+            return newHealth;
+          });
+        }
+      }
+
+      if (birdPosition < 25 && birdPosition > 5 && playerHeight > 40) {
+        if (now - lastHitRef.current > 1000) {
+          lastHitRef.current = now;
+          setHealth(prev => {
+            const newHealth = prev - 15;
+            if (newHealth <= 0) {
+              setGameOver(true);
+              setGameState(prevState => ({
+                ...prevState,
+                isPlaying: false,
+                cookies: prevState.cookies + score,
+                experience: prevState.experience + score * 10,
+                coins: prevState.coins + score * 5
+              }));
+              toast({
+                title: "Игра окончена! 🍪",
+                description: `Набрано очков: ${score}`
+              });
+            } else {
+              toast({
+                title: "Врезался в птицу! 🦅",
+                description: `HP: ${newHealth}`,
+                variant: "destructive"
+              });
+            }
+            return newHealth;
+          });
+        }
       }
 
       if (cookiePosition < 25 && cookiePosition > 5) {
-        setCookiePosition(150);
-        setGameState(prev => ({
-          ...prev,
-          cookies: prev.cookies + 1,
-          experience: prev.experience + 5,
-          coins: prev.coins + 3
-        }));
+        const heightDiff = Math.abs(playerHeight - 40);
+        if (heightDiff < 20) {
+          setCookiePosition(120 + Math.random() * 60);
+          setGameState(prev => ({
+            ...prev,
+            cookies: prev.cookies + 1,
+            experience: prev.experience + 5,
+            coins: prev.coins + 3
+          }));
+        }
       }
     }
-  }, [obstaclePosition, cookiePosition, playerJumping, gameState.isPlaying, gameOver, score]);
+  }, [obstaclePosition, birdPosition, cookiePosition, playerHeight, gameState.isPlaying, gameOver, score]);
 
   const buyPowerUp = (powerUp: PowerUp) => {
     if (gameState.coins >= powerUp.cost) {
@@ -198,16 +276,27 @@ const Index = () => {
   }, [gameState.experience]);
 
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && gameState.isPlaying) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && gameState.isPlaying && !gameOver) {
         e.preventDefault();
-        jump();
+        startFlying();
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [gameState.isPlaying, playerJumping, gameOver]);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        stopFlying();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [gameState.isPlaying, gameOver]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF8DC] via-[#FFE4B5] to-[#FFD4A3] p-4">
@@ -277,46 +366,56 @@ const Index = () => {
           <div className="space-y-6 animate-fade-in">
             <Card className="border-4 border-primary shadow-2xl bg-white">
               <CardHeader className="text-center bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
-                <CardTitle className="text-3xl">Беги и собирай печеньки!</CardTitle>
+                <CardTitle className="text-3xl">Летай и собирай печеньки!</CardTitle>
                 <CardDescription className="text-white text-lg font-semibold">
-                  Прыгай через препятствия, нажимая ПРОБЕЛ или кнопку
+                  Зажми ПРОБЕЛ чтобы лететь вверх. Перелетай ёлки и пролетай под птицами!
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-8">
-                <div className="relative h-64 bg-gradient-to-b from-sky-300 to-green-200 rounded-xl overflow-hidden border-4 border-accent shadow-inner">
-                  <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-amber-800 to-amber-600"></div>
+              <CardContent className="p-8 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-lg font-bold">HP: {health}</span>
+                      <span className="text-lg font-bold text-primary">Очки: {score}</span>
+                    </div>
+                    <Progress 
+                      value={health} 
+                      className="h-4 border-2 border-primary" 
+                    />
+                  </div>
+                </div>
+
+                <div className="relative h-80 bg-gradient-to-b from-sky-400 to-sky-200 rounded-xl overflow-hidden border-4 border-accent shadow-inner">
+                  <div className="absolute bottom-0 w-full h-24 bg-gradient-to-t from-green-700 to-green-500"></div>
                   
                   <div
-                    className={`absolute left-16 transition-all duration-500 ease-out ${
-                      playerJumping ? 'bottom-48' : 'bottom-20'
-                    }`}
+                    className="absolute left-16 transition-all duration-75 ease-linear"
+                    style={{ bottom: `${playerHeight}%` }}
                   >
-                    <div className="text-6xl">🏃</div>
+                    <div className="text-5xl">{isFlying ? '🚀' : '🏃'}</div>
                   </div>
 
                   {gameState.isPlaying && (
                     <>
                       <div
-                        className="absolute bottom-20 transition-all"
-                        style={{ left: `${obstaclePosition}%` }}
+                        className="absolute transition-all duration-75"
+                        style={{ left: `${obstaclePosition}%`, bottom: '0' }}
                       >
-                        <div className="text-4xl">🌳</div>
+                        <div className="text-5xl">🌳</div>
                       </div>
                       <div
-                        className="absolute bottom-28 transition-all"
-                        style={{ left: `${cookiePosition}%` }}
+                        className="absolute transition-all duration-75"
+                        style={{ left: `${birdPosition}%`, top: '15%' }}
                       >
-                        <div className="text-3xl">🍪</div>
+                        <div className="text-5xl">🦅</div>
+                      </div>
+                      <div
+                        className="absolute transition-all duration-75"
+                        style={{ left: `${cookiePosition}%`, top: '35%' }}
+                      >
+                        <div className="text-4xl">🍪</div>
                       </div>
                     </>
-                  )}
-
-                  {gameState.isPlaying && (
-                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 px-6 py-2 rounded-full border-4 border-primary">
-                      <div className="text-2xl font-bold text-primary">
-                        Очки: {score}
-                      </div>
-                    </div>
                   )}
 
                   {!gameState.isPlaying && gameOver && (
@@ -330,7 +429,7 @@ const Index = () => {
                   )}
                 </div>
 
-                <div className="flex gap-4 mt-6 justify-center">
+                <div className="flex gap-4 mt-6 justify-center flex-wrap">
                   {!gameState.isPlaying ? (
                     <Button
                       size="lg"
@@ -344,11 +443,15 @@ const Index = () => {
                     <>
                       <Button
                         size="lg"
-                        onClick={jump}
-                        className="bg-gradient-to-r from-accent to-purple-500 text-white px-12 py-6 text-2xl font-bold rounded-full shadow-lg hover:scale-105 transition-transform border-4 border-white"
+                        onMouseDown={startFlying}
+                        onMouseUp={stopFlying}
+                        onMouseLeave={stopFlying}
+                        onTouchStart={startFlying}
+                        onTouchEnd={stopFlying}
+                        className="bg-gradient-to-r from-accent to-purple-500 text-white px-12 py-6 text-2xl font-bold rounded-full shadow-lg hover:scale-105 transition-transform border-4 border-white active:scale-95"
                       >
-                        <Icon name="ArrowUp" className="mr-2" size={32} />
-                        ПРЫЖОК
+                        <Icon name="Plane" className="mr-2" size={32} />
+                        ЛЕТЕТЬ
                       </Button>
                       <Button
                         size="lg"
@@ -360,6 +463,9 @@ const Index = () => {
                       </Button>
                     </>
                   )}
+                </div>
+                <div className="text-center text-sm text-muted-foreground mt-2">
+                  💡 Зажми и держи кнопку ЛЕТЕТЬ или ПРОБЕЛ для полёта вверх
                 </div>
               </CardContent>
             </Card>
