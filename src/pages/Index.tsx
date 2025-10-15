@@ -409,13 +409,21 @@ const Index = () => {
                         className="absolute transition-all duration-75"
                         style={{ left: `${obstaclePosition}%`, bottom: '0' }}
                       >
-                        <div className="text-5xl">🌳</div>
+                        <img 
+                          src="https://cdn.poehali.dev/files/32a3f130-4d9b-41f7-84fb-35b08c77d7a4.png"
+                          alt="Soul Jam"
+                          className="w-16 h-16 object-contain drop-shadow-xl"
+                        />
                       </div>
                       <div
                         className="absolute transition-all duration-75"
                         style={{ left: `${birdPosition}%`, top: '15%' }}
                       >
-                        <div className="text-5xl">🦅</div>
+                        <img 
+                          src="https://cdn.poehali.dev/files/a5111a36-c8a1-470f-959b-d027d57604c4.png"
+                          alt="Pure Vanilla Cookie"
+                          className="w-20 h-20 object-contain drop-shadow-xl"
+                        />
                       </div>
                       <div
                         className="absolute transition-all duration-75"
